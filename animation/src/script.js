@@ -72,8 +72,8 @@ const computeAnimationPosition =  counter => {
 }
 
 const time = 0
-let now
-let then
+let now = 0
+let then = 0
 let deltaTime
 var cameraPosition = [0, 0, 100];
 var target = [0, 0, 0];
@@ -81,6 +81,8 @@ var up = [0, 1, 0];
 var cubeXRotation   =  sin;
 var cubeYRotation   =  cos;
 let counter = 0
+let currentAnimationTime = 0
+const totalAnimationTime = 10
 
 const startAnimationLoop = 
     (gl, 
@@ -89,8 +91,11 @@ const startAnimationLoop =
      cubeTranslation, 
      cubeUniforms, 
      computeMatrix) => time => {
-  counter += 1   
-  const position = computeAnimationPosition(counter)
+  const now = time * 0.001
+  deltaTime = now - then
+  then = now
+  currentAnimationTime += deltaTime * totalAnimationTime
+  const position = computeAnimationPosition(currentAnimationTime)
   const sin = position.startSin
   const cos = position.startCos
   const xtrans = position.startxt
@@ -122,8 +127,8 @@ const startAnimationLoop =
   )
   webglUtils.setUniforms(programInfo, cubeUniforms)
   gl.drawArrays(gl.TRIANGLES, 0, cubeBufferInfo.numElements)
-  if (counter == steps) counter = 0
-  if (counter < steps) 
+  if (currentAnimationTime > totalAnimationTime) currentAnimationTime = 0
+  if (currentAnimationTime < totalAnimationTime) 
     requestAnimationFrame(
       startAnimationLoop(
         gl, 
