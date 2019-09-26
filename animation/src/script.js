@@ -39,11 +39,38 @@ const setStartAnimation = () => {
     startxt: xtrans,
     startyt: ytrans,
     startzt: ztrans,
-    startscale: scale
+    scale: scale
   }
+  console.log(startPos)
+}
+
+let finalPos = {}
+const setFinalPos = () => {
+   finalPos = {
+    startSin: sin,
+    startCos: cos,
+    startxt: xtrans,
+    startyt: ytrans,
+    startzt: ztrans,
+    scale: scale
+  }
+  console.log(finalPos)
 }
 
 let buttonIsClicked = false
+const steps = 10;
+const computeAnimationPosition =  counter => {
+  let newPosition = {}
+  Object.keys(startPos)
+    .map(key => {
+      const startP = startPos[key]
+      const endP = finalPos[key]
+     const res = startP + counter * (endP - startP)/(steps - 1)
+      newPosition[key] = res
+    })
+  return newPosition
+}
+
 const time = 0
 let now
 let then
@@ -53,7 +80,6 @@ var target = [0, 0, 0];
 var up = [0, 1, 0];
 var cubeXRotation   =  sin;
 var cubeYRotation   =  cos;
-
 let counter = 0
 
 const startAnimationLoop = 
@@ -63,7 +89,14 @@ const startAnimationLoop =
      cubeTranslation, 
      cubeUniforms, 
      computeMatrix) => time => {
-  counter += 1
+  counter += 1   
+  const position = computeAnimationPosition(counter)
+  const sin = position.startSin
+  const cos = position.startCos
+  const xtrans = position.startxt
+  const ytrans = position.startyt
+  const ztrans = position.startzt
+  const scale = position.scale
   gl.enable(gl.CULL_FACE)
   gl.enable(gl.DEPTH_TEST)
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
@@ -78,21 +111,19 @@ const startAnimationLoop =
  
   gl.useProgram(programInfo.program)
   webglUtils.setBuffersAndAttributes(gl, programInfo, cubeBufferInfo)
+  
   cubeTranslation   = [xtrans, ytrans, ztrans]
- 
   cubeUniforms.u_matrix = computeMatrix(
     viewProjectionMatrix,
     cubeTranslation,
-    cubeXRotation,
-    cubeYRotation
+    sin,
+    cos,
+    scale
   )
   webglUtils.setUniforms(programInfo, cubeUniforms)
   gl.drawArrays(gl.TRIANGLES, 0, cubeBufferInfo.numElements)
-  /*  
-    TODO: 
-      CHECK IF START POSITION AND END IS THE SAME, 
-        CALL REQANFRAME IF TRUE */
-  if (counter < 10) 
+  if (counter == steps) counter = 0
+  if (counter < steps) 
     requestAnimationFrame(
       startAnimationLoop(
         gl, 
@@ -144,7 +175,7 @@ function main() {
   };
   
   var cubeTranslation   = [xtrans, ytrans, ztrans];
-  function computeMatrix(viewProjectionMatrix, translation, xRotation, yRotation) {
+  function computeMatrix(viewProjectionMatrix, translation, xRotation, yRotation, scale) {
     var matrix = m4.translate(viewProjectionMatrix,
         translation[0],
         translation[1],
@@ -157,7 +188,8 @@ function main() {
   
   const animationButton = document.getElementById('animation-controller')
   animationButton.onclick = () => {
-    if (buttonIsClicked) 
+    if (buttonIsClicked) {
+    setFinalPos()
     requestAnimationFrame(
       startAnimationLoop(
         gl, 
@@ -166,7 +198,8 @@ function main() {
         cubeTranslation, 
         cubeUniforms,
         computeMatrix))
-    else setStartAnimation()
+      }
+      else setStartAnimation()
     buttonIsClicked = !buttonIsClicked
   }
 
@@ -203,7 +236,6 @@ function main() {
 
     var cubeXRotation   =  sin;
     var cubeYRotation   =  cos;
-
     gl.useProgram(programInfo.program);
 
     // ------ Draw the cube --------
@@ -215,7 +247,8 @@ function main() {
         viewProjectionMatrix,
         cubeTranslation,
         cubeXRotation,
-        cubeYRotation);
+        cubeYRotation,
+        scale);
 
     webglUtils.setUniforms(programInfo, cubeUniforms);
     gl.drawArrays(gl.TRIANGLES, 0, cubeBufferInfo.numElements);
