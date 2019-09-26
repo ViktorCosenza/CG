@@ -44,57 +44,68 @@ const setStartAnimation = () => {
 }
 
 let buttonIsClicked = false
-const startAnimationLoop = (gl, programInfo, cubeBufferInfo, cubeTranslation, cubeUniforms, computeMatrix) => {
-  const time = 0
-  let now
-  let then
-  let deltaTime
-  while (buttonIsClicked === true) {
-    console.log(buttonIsClicked)
-    webglUtils.resizeCanvasToDisplaySize(gl.canvas);
+const time = 0
+let now
+let then
+let deltaTime
+var cameraPosition = [0, 0, 100];
+var target = [0, 0, 0];
+var up = [0, 1, 0];
+var cubeXRotation   =  sin;
+var cubeYRotation   =  cos;
 
-    gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
-    gl.enable(gl.CULL_FACE);
-    gl.enable(gl.DEPTH_TEST);
+let counter = 0
 
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+const startAnimationLoop = 
+    (gl, 
+     programInfo, 
+     cubeBufferInfo, 
+     cubeTranslation, 
+     cubeUniforms, 
+     computeMatrix) => time => {
+  counter += 1
+  gl.enable(gl.CULL_FACE)
+  gl.enable(gl.DEPTH_TEST)
+  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
 
-    var aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
-    var projectionMatrix =
-        m4.perspective(fieldOfViewRadians, aspect, 1, 2000);
+  var aspect = gl.canvas.clientWidth / gl.canvas.clientHeight
+  var projectionMatrix =
+      m4.perspective(fieldOfViewRadians, aspect, 1, 2000)
 
-    var cameraPosition = [0, 0, 100];
-    var target = [0, 0, 0];
-    var up = [0, 1, 0];
-    var cameraMatrix = m4.lookAt(cameraPosition, target, up);
-
-    var viewMatrix = m4.inverse(cameraMatrix);
-    var viewProjectionMatrix = m4.multiply(projectionMatrix, viewMatrix);
-    var cubeXRotation   =  sin;
-    var cubeYRotation   =  cos;
-
-    gl.useProgram(programInfo.program)
-
-    webglUtils.setBuffersAndAttributes(gl, programInfo, cubeBufferInfo)
-
-    cubeTranslation   = [xtrans, ytrans, ztrans]
-
-    cubeUniforms.u_matrix = computeMatrix(
-      viewProjectionMatrix,
-      cubeTranslation,
-      cubeXRotation,
-      cubeYRotation
-    )
-
-    webglUtils.setUniforms(programInfo, cubeUniforms)
-    gl.drawArrays(gl.TRIANGLES, 0, cubeBufferInfo.numElements)
-    break
-  }
+  var cameraMatrix = m4.lookAt(cameraPosition, target, up)
+  var viewMatrix = m4.inverse(cameraMatrix)
+  var viewProjectionMatrix = m4.multiply(projectionMatrix, viewMatrix)
+ 
+  gl.useProgram(programInfo.program)
+  webglUtils.setBuffersAndAttributes(gl, programInfo, cubeBufferInfo)
+  cubeTranslation   = [xtrans, ytrans, ztrans]
+ 
+  cubeUniforms.u_matrix = computeMatrix(
+    viewProjectionMatrix,
+    cubeTranslation,
+    cubeXRotation,
+    cubeYRotation
+  )
+  webglUtils.setUniforms(programInfo, cubeUniforms)
+  gl.drawArrays(gl.TRIANGLES, 0, cubeBufferInfo.numElements)
+  /*  
+    TODO: 
+      CHECK IF START POSITION AND END IS THE SAME, 
+        CALL REQANFRAME IF TRUE */
+  if (counter < 10) 
+    requestAnimationFrame(
+      startAnimationLoop(
+        gl, 
+        programInfo, 
+        cubeBufferInfo, 
+        cubeTranslation, 
+        cubeUniforms, 
+        computeMatrix
+    ))
 }
 
 
 function main() {
-  // Get A WebGL context
   /** @type {HTMLCanvasElement} */
   var canvas = document.getElementById("canvas");
   var gl = canvas.getContext("webgl");
@@ -147,13 +158,14 @@ function main() {
   const animationButton = document.getElementById('animation-controller')
   animationButton.onclick = () => {
     if (buttonIsClicked) 
-    startAnimationLoop(
-      gl, 
-      programInfo, 
-      cubeBufferInfo, 
-      cubeTranslation, 
-      cubeUniforms,
-      computeMatrix)
+    requestAnimationFrame(
+      startAnimationLoop(
+        gl, 
+        programInfo, 
+        cubeBufferInfo, 
+        cubeTranslation, 
+        cubeUniforms,
+        computeMatrix))
     else setStartAnimation()
     buttonIsClicked = !buttonIsClicked
   }
