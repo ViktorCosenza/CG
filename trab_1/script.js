@@ -117,26 +117,41 @@ uniform vec4 u_colorOffset;
 out vec4 outColor;
 void main() {outColor = v_color * u_colorMult + u_colorOffset;}`
 
+function* interpolateEllipse (min, max) {
+  let n = 0
+  while (true) {
+    n = n % 1
+    const theta = degToRad(n * 360)
+    const x = Math.cos(theta) * min
+    const y = Math.sin(theta) * max
+    yield [x, y]
+    n += 0.01
+  }
+}
+
 var Node = function(rotation=0, children, eccentricity=0) {
   this.children = children
-  
   this.eccentricity = eccentricity
-  this.major = 1
-  this.minor = this.major * Math.sqrt(1 - Math.pow(eccentricity, 2))
-  this.distance = this.eccentricity * this.major
-
+  this.step = 0
   this.rotation = rotation
   this.localMatrix = m4.identity();
   this.worldMatrix = m4.identity();
+  this.ellipseGenerator = interpolateEllipse(2, 4) 
   this.tick = (recursive=true) => {
-    let transform = m4.yRotation(this.rotation)
     let dot = twgl.v3.dot(twgl.m4.getAxis(this.localMatrix, 0), [1, 0, 0])
-    let angle = dot / (twgl.v3.length(twgl.m4.getAxis(this.localMatrix, 0)))
-    //if (this.eccentricity != 0) console.log(angle)
-    let x_translate = this.major * Math.cos(degToRad(angle)) - this.eccentricity
-    let y_translate = this.major * Math.sqrt(1-Math.pow(this.eccentricity, 2)) * Math.sin(angle)
-    twgl.m4.translate(transform, [x_translate, y_translate, 0], transform)
-    m4.multiply(transform, this.localMatrix, this.localMatrix)
+    let angle = dot / (twgl.v3.length(twgl.m4.getAxis(this.localMatrix, 0))) * 360
+    if (this.eccentricity != 0) {
+      const{value, done} = this.ellipseGenerator.next()
+      const [x,z] = value
+      const nextPos = [x, 0, z]
+      twgl.m4.translate(
+        this.localMatrix,
+        nextPos,
+        this.localMatrix
+      )
+    }
+    else
+      m4.multiply(m4.yRotation(this.rotation), this.localMatrix, this.localMatrix)
     if (recursive) this.children.map(child => child.tick(recursive))
   }
 }
