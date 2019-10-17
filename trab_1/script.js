@@ -25,17 +25,15 @@ function main() {
   var programInfo = twgl.createProgramInfo(gl, [vs, fs]);
   var sphereVAO = twgl.createVAOFromBufferInfo(gl, programInfo, sphereBufferInfo);
 
-
-
   const sunNode = createPlanet([0.6, 0.6, 0, 1], [0.4, 0.4, 0, 1], 1, 0.005)
   const earthNode = createPlanet([0.2, 0.5, 0.8, 1], [0.8, 0.5, 0.2, 1], 0.5, 0.5);
   const moonNode = createPlanet([0.6, 0.6, 0.6, 1], [0.1, 0.1, 0.1, 1], 0.1, -0.01)
 
   const mercury = createPlanet([1, 1, 1, 1], [0.5, 0.5, 0.5, 0.5], 0.5, -0.5)
-  const mercuryOrbit = new Node(0.05, [mercury])
+  const mercuryOrbit = new Node(0.01, [mercury])
   
-  const moonOrbitNode = new Node(0.0005, [moonNode]);
-  const earthOrbitNode = new Node(0.005, [earthNode, moonOrbitNode]);
+  const moonOrbitNode = new Node(0, [moonNode]);
+  const earthOrbitNode = new Node(0.05, [earthNode, moonOrbitNode], 0.5);
   const solarSystemNode = new Node(0.0, [earthOrbitNode, mercuryOrbit, sunNode]);
 
   earthOrbitNode.localMatrix = m4.translation(100, 0, 0)
@@ -119,14 +117,27 @@ uniform vec4 u_colorOffset;
 out vec4 outColor;
 void main() {outColor = v_color * u_colorMult + u_colorOffset;}`
 
-var Node = function(rotation=0, children) {
+var Node = function(rotation=0, children, eccentricity=0) {
   this.children = children
+  
+  this.eccentricity = eccentricity
+  this.major = 1
+  this.minor = this.major * Math.sqrt(1 - Math.pow(eccentricity, 2))
+  this.distance = this.eccentricity * this.major
+
   this.rotation = rotation
   this.localMatrix = m4.identity();
   this.worldMatrix = m4.identity();
   this.tick = (recursive=true) => {
-    m4.multiply(m4.yRotation(this.rotation), this.localMatrix, this.localMatrix)
-    if (recursive) this.children.map(child => child.tick())
+    let transform = m4.yRotation(this.rotation)
+    let dot = twgl.v3.dot(twgl.m4.getAxis(this.localMatrix, 0), [1, 0, 0])
+    let angle = dot / (twgl.v3.length(twgl.m4.getAxis(this.localMatrix, 0)))
+    //if (this.eccentricity != 0) console.log(angle)
+    let x_translate = this.major * Math.cos(degToRad(angle)) - this.eccentricity
+    let y_translate = this.major * Math.sqrt(1-Math.pow(this.eccentricity, 2)) * Math.sin(angle)
+    twgl.m4.translate(transform, [x_translate, y_translate, 0], transform)
+    m4.multiply(transform, this.localMatrix, this.localMatrix)
+    if (recursive) this.children.map(child => child.tick(recursive))
   }
 }
 
