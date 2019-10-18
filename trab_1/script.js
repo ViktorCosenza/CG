@@ -119,7 +119,11 @@ function* interpolateEllipse (min, max, speed) {
     n += speed
   }
 }
+/* TODO:
+  THE INTERPOLATE ELLIPSE FUNCTION SHOULD RETURN ELIPSES THAT HAVE CENTER 0, 0
 
+  THE RETURN FROM INTERPOLATE ELLIPSE IS FIXED BETWEEN A CIRCLE OF CENTER 0,0
+  BUT IN ORDER TO OBJECTS ORBIT ITS PARENT, IT NEEDS TO BE TRANSLATED */
 var Node = function({max, min, speed=0.01}, children=[]) {
   this.parent = null
   this.children = children
