@@ -4,6 +4,7 @@
 
 "use strict"
 
+const {v3, m4} = twgl
 
 function main() {
   const canvas = document.getElementById("canvas");
@@ -25,16 +26,22 @@ function main() {
   var programInfo = twgl.createProgramInfo(gl, [vs, fs]);
   var sphereVAO = twgl.createVAOFromBufferInfo(gl, programInfo, sphereBufferInfo);
 
-  const sunNode = createPlanet([0.6, 0.6, 0, 1], [0.4, 0.4, 0, 1], 1, 0.005)
-  const earthNode = createPlanet([0.2, 0.5, 0.8, 1], [0.8, 0.5, 0.2, 1], 0.5, 0.5);
-  const moonNode = createPlanet([0.6, 0.6, 0.6, 1], [0.1, 0.1, 0.1, 1], 0.1, -0.01)
-  
-  const moonOrbitNode = new Node({min:1, max:1, speed:0.01}, [moonNode])
-  const earthOrbitNode = new Node({min:2, max:4, speed:0.01}, [earthNode, moonOrbitNode])
-  const solarSystemNode = new Node({min:0, max:0, speed:0.01}, [earthOrbitNode, sunNode])
+  const sunNode = createPlanet(
+    [0.6, 0.6, 0, 1], 
+    [0.4, 0.4, 0, 1],
+    1, 
+    0.005)
+  const earthNode = createPlanet(
+    [0.2, 0.5, 0.8, 1], 
+    [0.8, 0.5, 0.2, 1], 
+    1, 
+    0.5);
 
-  twgl.m4.translate(earthOrbitNode.localMatrix, [150, 0, 0], earthOrbitNode.localMatrix)
-  twgl.m4.translate(moonOrbitNode.localMatrix, [30, 0, 0], moonOrbitNode.localMatrix)
+  const moonNode = createPlanet([0.6, 0.6, 0.6, 1], [0.1, 0.1, 0.1, 1], 0.1, -0.01)
+  const moonOrbitNode = new Node({min:50, max:50, speed:0.01}, [moonNode], [0, 0, 100])
+
+  const earthOrbitNode = new Node({min:200, max:150, speed:0.01}, [earthNode, moonOrbitNode], [100, 0, 0])
+  const solarSystemNode = new Node({min:0, max:0, speed:0.01}, [earthOrbitNode, sunNode])
 
   var objects = [
     sunNode,
@@ -53,7 +60,7 @@ function main() {
   /* Functions */
   function createPlanet (color, colorMult, scale, rotation, children=[]) {
     const planet = new Node({min:rotation, max:rotation}, children)
-    planet.localMatrix = m4.scaling(scale, scale, scale)
+    planet.localMatrix = m4.scaling([scale, scale, scale])
     planet.drawInfo = {
       uniforms: {
         u_colorOffset: color,  
@@ -109,12 +116,12 @@ out vec4 outColor;
 void main() {outColor = v_color * u_colorMult + u_colorOffset;}`
 
 function* interpolateEllipse (min, max, speed) {
-  let n = 1
+  let n = 0
   while (true) {
     n = n % 2
     const theta = degToRad((n - 1) * 180)
     const x = Math.cos(theta) * max
-    const y = Math.sin(theta) * - min
+    const y = Math.sin(theta) * min
     yield [x, y]
     n += speed
   }
@@ -124,24 +131,28 @@ function* interpolateEllipse (min, max, speed) {
 
   THE RETURN FROM INTERPOLATE ELLIPSE IS FIXED BETWEEN A CIRCLE OF CENTER 0,0
   BUT IN ORDER TO OBJECTS ORBIT ITS PARENT, IT NEEDS TO BE TRANSLATED */
-var Node = function({max, min, speed=0.01}, children=[]) {
+  
+var Node = function({max, min, speed=0.01}, children=[], translation=[0, 0, 0]) {
   this.parent = null
   this.children = children
   this.children.map(child => { child.parent = this })
+  this.localMatrix = m4.identity()
+  this.translation = translation
+  m4.translate(this.localMatrix, this.translation, this.localMatrix)
 
-  this.localMatrix = m4.identity();
-  this.worldMatrix = m4.identity();
+  this.worldMatrix = m4.identity()
   this.max = max
   this.min = min
   this.speed = speed
   this.ellipseGenerator = interpolateEllipse(this.max, this.min, this.speed) 
   this.tick = (recursive=true) => {
-    const{value, done} = this.ellipseGenerator.next()
-    const [x,z] = value
-    let nextPos = [z, 0, x]
-    twgl.m4.translate(
+    const {value} = this.ellipseGenerator.next()
+    const [x, z] = value
+    const currentPosition = m4.getAxis(this.localMatrix, 3)
+    const translateVector = v3.subtract([x, 0, z], currentPosition)
+    m4.translate(
       this.localMatrix,
-      nextPos,
+      translateVector,
       this.localMatrix
     )
     if (recursive) this.children.map(child => child.tick(recursive))
@@ -157,7 +168,5 @@ Node.prototype.updateWorldMatrix = function(matrix) {
 function degToRad(d) {
   return d * Math.PI / 180;
 }
-
-
 
 main();
