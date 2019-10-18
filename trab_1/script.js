@@ -79,15 +79,18 @@ function main() {
     gl.clearColor(0, 0, 0, 1);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
   }
-
+  let then = 0;
   function drawScene(time) {
-    time *= 0.001;
+    time *= 0.01
+    const deltaTime = time - then;
+    then = time
     resetCanvas(gl)    
     const aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
     const projectionMatrix = m4.perspective(fieldOfViewRadians, aspect, 1, 2000);
     const viewProjectionMatrix = m4.multiply(projectionMatrix, viewMatrix);
+    
     /* Tick objects */
-    solarSystemNode.tick(true)
+    solarSystemNode.tick(true, deltaTime)
     solarSystemNode.updateWorldMatrix();
     objects.forEach(function(object) {
         object.drawInfo.uniforms.u_matrix = m4.multiply(viewProjectionMatrix, object.worldMatrix);
@@ -117,13 +120,14 @@ void main() {outColor = v_color * u_colorMult + u_colorOffset;}`
 
 function* interpolateEllipse (min, max, speed) {
   let n = 0
+  let deltaTime = 0
   while (true) {
     n = n % 2
     const theta = degToRad((n - 1) * 180)
     const x = Math.cos(theta) * max
     const y = Math.sin(theta) * min
-    yield [x, y]
-    n += speed
+    deltaTime = yield [x, y]
+    n += speed * deltaTime
   }
 }
 /* TODO:
@@ -145,8 +149,8 @@ var Node = function({max, min, speed=0.01}, children=[], translation=[0, 0, 0]) 
   this.min = min
   this.speed = speed
   this.ellipseGenerator = interpolateEllipse(this.max, this.min, this.speed) 
-  this.tick = (recursive=true) => {
-    const {value} = this.ellipseGenerator.next()
+  this.tick = (recursive=true, deltaTime) => {
+    const {value} = this.ellipseGenerator.next(deltaTime)
     const [x, z] = value
     const currentPosition = m4.getAxis(this.localMatrix, 3)
     const translateVector = v3.subtract([x, 0, z], currentPosition)
@@ -155,7 +159,7 @@ var Node = function({max, min, speed=0.01}, children=[], translation=[0, 0, 0]) 
       translateVector,
       this.localMatrix
     )
-    if (recursive) this.children.map(child => child.tick(recursive))
+    if (recursive) this.children.map(child => child.tick(recursive, deltaTime))
   }
 }
 
