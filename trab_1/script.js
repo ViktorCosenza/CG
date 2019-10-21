@@ -59,9 +59,11 @@ function main() {
     moonNode.drawInfo,
   ];
 
-  var orbits = earthOrbitNode
+  var orbitsToDraw = [
+    earthOrbitNode,
+    moonOrbitNode
+  ].map(createOrbit)
   
-  var orbitsToDraw = createOrbit(orbits)
   requestAnimationFrame(drawScene);
 
   /* Functions */
@@ -79,7 +81,7 @@ function main() {
       }
     })
     
-    return {
+    node.drawInfo = {
       uniforms: {
         u_colorOffset: [1, 1, 1, 1],
         u_colorMult: [1, 1, 1, 1]
@@ -89,6 +91,7 @@ function main() {
       programInfo: programInfo,
       bufferInfo: bufferInfo
     }
+    return node
   }
   
   function createPlanet (color, colorMult, scale, rotation, children=[]) {
@@ -129,10 +132,12 @@ function main() {
     objects.forEach(function(object) {
         object.drawInfo.uniforms.u_matrix = m4.multiply(viewProjectionMatrix, object.worldMatrix);
     });
+
+    orbitsToDraw.forEach(orbit => {
+      orbit.drawInfo.uniforms.u_matrix = m4.multiply(viewProjectionMatrix, orbit.parent.worldMatrix)
+    })
     
-    orbitsToDraw.uniforms.u_matrix = m4.multiply(viewProjectionMatrix, sunNode.worldMatrix)
-    
-    twgl.drawObjectList(gl, [...objectsToDraw, orbitsToDraw])
+    twgl.drawObjectList(gl, [...objectsToDraw, ...orbitsToDraw.map(el => el.drawInfo)])
 
     requestAnimationFrame(drawScene);
   }
