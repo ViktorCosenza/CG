@@ -63,7 +63,7 @@ function main() {
   }
   
   function createPlanet (color, colorMult, scale, rotation, speed, translation=[0,0,0], children=[]) {
-    const planet = new Node({min:rotation, max:rotation, speed:speed}, children, translation, true)
+    const planet = new Node({min:rotation, max:rotation, speed:speed}, children, translation, 0, true)
     planet.localMatrix = m4.scaling([scale, scale, scale])
     planet.drawInfo = {
       uniforms: {
@@ -119,7 +119,7 @@ function main() {
     const venusOrbit = new Node({min: 60, max:50, speed:0.005}, [venus])
     
     const moonOrbit = new Node({min:22, max:20, speed:0.01}, [moon])
-    const earthOrbit = new Node({min:100, max:85, speed:0.001}, [earth, moonOrbit], [0, 0, 0])
+    const earthOrbit = new Node({min:180, max:85, speed:0.02}, [earth, moonOrbit], [0, 0, 0], degToRad(25))
 
     const solarSystem = new Node({min:0, max:0, speed:0.01}, [mercuryOrbit, venusOrbit, earthOrbit, sun])
 
@@ -155,7 +155,10 @@ function main() {
     });
 
     orbitsToDraw.forEach(orbit => {
-      orbit.drawInfo.uniforms.u_matrix = m4.multiply(viewProjectionMatrix, orbit.parent.worldMatrix)
+/* TODO FIND A WAY TO FIX THIS WHITOUT TRANSLATION IT WORKS :(*/
+      const transform = m4.copy(orbit.parent.worldMatrix)
+      m4.rotateZ(transform, orbit.tilt, transform)
+      orbit.drawInfo.uniforms.u_matrix = m4.multiply(viewProjectionMatrix, transform)
     })
     
     twgl.drawObjectList(gl, [...objects.map(el => el.drawInfo), ...orbitsToDraw.map(el => el.drawInfo)])
@@ -184,18 +187,16 @@ out vec4 outColor;
 void main() {
   outColor = v_color * u_colorMult + u_colorOffset;}`
 
-function ellipse (min, max, translation, steps=100) {
+function ellipse (min, max, steps=100) {
   let points = []
   let n = 0
   let stepSize = 2/steps
   while (n <= 2) {
     const theta = degToRad(n * 180)
     const x = Math.cos(theta) * max
-    const y = Math.sin(theta) * min
-    points.push([
-      y + translation[0], 
-      0 + translation[1], 
-      x + translation[2]])
+    const z = Math.sin(theta) * min
+    let point = [z, 0, x]
+    points.push(point)
     n += stepSize
   }
   return points
@@ -208,17 +209,18 @@ function* interpolateEllipse (min, max, speed) {
     n = n % 2
     const theta = degToRad(n * 180)
     const x = Math.cos(theta) * max
-    const y = Math.sin(theta) * min
-    deltaTime = yield [x, y]
+    const z = Math.sin(theta) * min
+    deltaTime = yield [x, 0, z]
     n += speed * deltaTime
   }
 }
 
 /* TODO: ADD TILT SUPPORT */
-var Node = function({max, min, speed=0.01}, children=[], translation=[0, 0, 0], isPlanet=false) {
+var Node = function({max, min, speed=0.01}, children=[], translation=[0, 0, 0], tilt=0, isPlanet=false) {
   this.parent = null
   this.isPlanet = isPlanet
   this.children = children
+  this.tilt = tilt
   this.max = max
   this.min = min
   this.speed = speed
@@ -229,8 +231,7 @@ var Node = function({max, min, speed=0.01}, children=[], translation=[0, 0, 0], 
   this.children.map(child => { child.parent = this })
 
 
-  this.orbit = ellipse(this.min, this.max, this.translation)
-  console.log(this.orbit)
+  this.orbit = ellipse(this.min, this.max)
   this.ellipseGenerator = interpolateEllipse(this.max, this.min, this.speed) 
 
   this.tick = (recursive=true, deltaTime) => {
@@ -239,9 +240,9 @@ var Node = function({max, min, speed=0.01}, children=[], translation=[0, 0, 0], 
       m4.multiply(rotation, this.localMatrix, this.localMatrix)
     } else {
       const {value} = this.ellipseGenerator.next(deltaTime)
-      const [x, z] = value
+      const [x, y, z] = value
       const currentPosition = m4.getAxis(this.localMatrix, 3)
-      const translateVector = v3.subtract([x, 0, z], currentPosition)
+      const translateVector = v3.subtract([x, y, z], currentPosition)
       v3.add(this.translation, translateVector, translateVector)
       
       m4.translate(
@@ -254,7 +255,12 @@ var Node = function({max, min, speed=0.01}, children=[], translation=[0, 0, 0], 
 }
 
 Node.prototype.updateWorldMatrix = function(matrix) {
-  if (matrix) m4.multiply(matrix, this.localMatrix, this.worldMatrix)
+  if (matrix) {
+    const transformed = m4.copy(matrix)
+    m4.rotateZ(transformed, this.tilt, transformed)
+    m4.translate(transformed, this.translation, transformed)
+    m4.multiply(transformed, this.localMatrix, this.worldMatrix)
+  }
   else        m4.copy(this.localMatrix, this.worldMatrix)
   this.children.map(child => child.updateWorldMatrix(this.worldMatrix))
 }
