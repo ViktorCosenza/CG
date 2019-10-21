@@ -7,6 +7,8 @@
 const {v3, m4} = twgl
 
 function main() {
+
+  /* Initial setup */
   const canvas = document.getElementById("canvas");
   const gl = canvas.getContext("webgl2");
   if (!gl) throw Error('Browser does not support opengl')
@@ -26,47 +28,14 @@ function main() {
 
   var programInfo = twgl.createProgramInfo(gl, [vs, fs]);
   var sphereVAO = twgl.createVAOFromBufferInfo(gl, programInfo, sphereBufferInfo);
-
-  const sunNode = createPlanet(
-    [0.6, 0.6, 0, 1], 
-    [0.4, 0.4, 0, 1],
-    1, 
-    0.005)
-  const earthNode = createPlanet(
-    [0.2, 0.5, 0.8, 1], 
-    [0.8, 0.5, 0.2, 1], 
-    1, 
-    0.5);
-  const moonNode = createPlanet(
-    [0.6, 0.6, 0.6, 1], 
-    [0.1, 0.1, 0.1, 1], 
-    0.1, 
-    -0.01)
-
-  const moonOrbitNode = new Node({min:50, max:40, speed:0.1}, [moonNode], [0, 0, 100])
-  const earthOrbitNode = new Node({min:200, max:150, speed:0.01}, [earthNode, moonOrbitNode], [100, 0, 0])
-  const solarSystemNode = new Node({min:0, max:0, speed:0.1}, [earthOrbitNode, sunNode])
-
-  var objects = [
-    sunNode,
-    earthNode,
-    moonNode,
-  ];
-
-  var objectsToDraw = [
-    sunNode.drawInfo,
-    earthNode.drawInfo,
-    moonNode.drawInfo,
-  ];
-
-  var orbitsToDraw = [
-    earthOrbitNode,
-    moonOrbitNode
-  ].map(createOrbit)
   
+  const solarSystem = createSolarSystem()
+  const orbitsToDraw = solarSystem.orbits.map(createOrbit)
+  const objects = solarSystem.planets
+
   requestAnimationFrame(drawScene);
 
-  /* Functions */
+  /* Helper Functions */
   function createOrbit(node) {
     const flattened = node.orbit.flat(Infinity)
     const bufferInfo = twgl.createBufferInfoFromArrays(gl, {
@@ -80,7 +49,6 @@ function main() {
         data: new Array(flattened.length * 4).fill(1)
       }
     })
-    
     node.drawInfo = {
       uniforms: {
         u_colorOffset: [1, 1, 1, 1],
@@ -94,8 +62,8 @@ function main() {
     return node
   }
   
-  function createPlanet (color, colorMult, scale, rotation, children=[]) {
-    const planet = new Node({min:rotation, max:rotation}, children)
+  function createPlanet (color, colorMult, scale, rotation, speed, children=[], translation=[0,0,0]) {
+    const planet = new Node({min:rotation, max:rotation, speed:speed}, children, translation, true)
     planet.localMatrix = m4.scaling([scale, scale, scale])
     planet.drawInfo = {
       uniforms: {
@@ -107,6 +75,57 @@ function main() {
       vertexArray: sphereVAO,
     }
     return planet
+  }
+
+  function createSolarSystem () { 
+    const sun = createPlanet(
+      [0.6, 0.6, 0, 1], 
+      [0.4, 0.4, 0, 1],
+      0.5,
+      1, 
+      0.0005)
+    const earth = createPlanet(
+      [0.2, 0.5, 0.8, 1], 
+      [0.8, 0.5, 0.2, 1], 
+      0.5,
+      1, 
+      0.1);
+    const moon = createPlanet(
+      [0.6, 0.6, 0.6, 1], 
+      [0.1, 0.1, 0.1, 1], 
+      0.2,
+      0.1, 
+      -0.01)
+    
+    const venus = createPlanet(
+      [0.5, 0, 0, 0.1],
+      [1, 1, 0, 1],
+      0.5,
+      0.1,
+      -0.2
+    )
+    
+    const mercury = createPlanet(
+      [1, 0, 0, 1],
+      [1, 1, 1, 1],
+      0.2,
+      0.1,
+      -0.2
+    )
+
+    const mercuryOrbit = new Node({min: 30, max: 30, speed:0.01}, [mercury], [0, 0, 100])
+    const venusOrbit = new Node({min: 60, max:50, speed:0.005}, [venus], [0, 0, 200])
+    
+    const moonOrbit = new Node({min:22, max:20, speed:0.01}, [moon], [0, 0, 100])
+    const earthOrbit = new Node({min:100, max:85, speed:0.001}, [earth, moonOrbit], [100, 0, 0])
+
+    const solarSystem = new Node({min:0, max:0, speed:0.01}, [mercuryOrbit, venusOrbit, earthOrbit, sun])
+
+    return {
+      parent: solarSystem,
+      planets: [sun, venus, earth, moon, mercury],
+      orbits: [moonOrbit, earthOrbit, venusOrbit, mercuryOrbit]
+    }
   }
 
   function resetCanvas(gl) {
@@ -127,8 +146,8 @@ function main() {
     const viewProjectionMatrix = m4.multiply(projectionMatrix, viewMatrix);
     
     /* Tick objects */
-    solarSystemNode.tick(true, deltaTime)
-    solarSystemNode.updateWorldMatrix();
+    solarSystem.parent.tick(true, deltaTime)
+    solarSystem.parent.updateWorldMatrix();
     objects.forEach(function(object) {
         object.drawInfo.uniforms.u_matrix = m4.multiply(viewProjectionMatrix, object.worldMatrix);
     });
@@ -137,7 +156,7 @@ function main() {
       orbit.drawInfo.uniforms.u_matrix = m4.multiply(viewProjectionMatrix, orbit.parent.worldMatrix)
     })
     
-    twgl.drawObjectList(gl, [...objectsToDraw, ...orbitsToDraw.map(el => el.drawInfo)])
+    twgl.drawObjectList(gl, [...objects.map(el => el.drawInfo), ...orbitsToDraw.map(el => el.drawInfo)])
 
     requestAnimationFrame(drawScene);
   }
@@ -153,27 +172,6 @@ out vec4 v_color;
 void main() {
   gl_Position = u_matrix * a_position;
   v_color = a_color;}`
-
-var vertexShaderOrbit = `#version 300 es
-in vec4 a_position;
-in vec4 a_color;
-uniform mat4 u_matrix;
-out vec4 v_color;
-
-void main() {
-  gl_Position = u_matrix * a_position;
-  v_color = a_color;
-}`
-
-var fragmentShaderOrbit = `#version 300 es
-precision mediump float;
-out vec4 outColor;
-in vec4 v_color;
-
-void main() {
-  outColor = v_color;
-}
-`
 
 var fs = `#version 300 es
 precision mediump float;
@@ -211,8 +209,9 @@ function* interpolateEllipse (min, max, speed) {
   }
 }
 
-var Node = function({max, min, speed=0.01}, children=[], translation=[0, 0, 0]) {
+var Node = function({max, min, speed=0.01}, children=[], translation=[0, 0, 0], isPlanet=false) {
   this.parent = null
+  this.isPlanet = isPlanet
   this.children = children
   this.children.map(child => { child.parent = this })
   this.localMatrix = m4.identity()
@@ -226,15 +225,19 @@ var Node = function({max, min, speed=0.01}, children=[], translation=[0, 0, 0]) 
   this.orbit = ellipse(this.min, this.max)
   this.ellipseGenerator = interpolateEllipse(this.max, this.min, this.speed) 
   this.tick = (recursive=true, deltaTime) => {
-    const {value} = this.ellipseGenerator.next(deltaTime)
-    const [x, z] = value
-    const currentPosition = m4.getAxis(this.localMatrix, 3)
-    const translateVector = v3.subtract([x, 0, z], currentPosition)
-    m4.translate(
-      this.localMatrix,
-      translateVector,
-      this.localMatrix
-    )
+    if(this.isPlanet) {
+      const rotation = m4.rotationY(this.speed)
+      m4.multiply(rotation, this.localMatrix, this.localMatrix)
+    } else {
+      const {value} = this.ellipseGenerator.next(deltaTime)
+      const [x, z] = value
+      const currentPosition = m4.getAxis(this.localMatrix, 3)
+      const translateVector = v3.subtract([x, 0, z], currentPosition)
+      m4.translate(
+        this.localMatrix,
+        translateVector,
+        this.localMatrix
+      )}
     if (recursive) this.children.map(child => child.tick(recursive, deltaTime))
   }
 }
@@ -248,5 +251,8 @@ Node.prototype.updateWorldMatrix = function(matrix) {
 function degToRad(d) {
   return d * Math.PI / 180;
 }
+
+
+
 
 main();
