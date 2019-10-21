@@ -60,23 +60,17 @@ function main() {
   ];
 
   var orbits = earthOrbitNode
-  var orbitProgram = twgl.createProgramInfo(gl, [vertexShaderOrbit, fragmentShaderOrbit])
   
-  var orbitsToDraw = {
-    active:true,
-    type: gl.LINES,
-    programInfo: orbitProgram,
-    bufferInfo: createOrbit(orbits),
-  }
+  var orbitsToDraw = createOrbit(orbits)
   requestAnimationFrame(drawScene);
 
   /* Functions */
   function createOrbit(node) {
     const flattened = node.orbit.flat(Infinity)
-    return twgl.createBufferInfoFromArrays(gl, {
+    const bufferInfo = twgl.createBufferInfoFromArrays(gl, {
       position: {
         numComponents: 3,
-         data: flattened.map(el => el/200), 
+         data: flattened.map(el => el), 
       },
       color: {
         numComponents: 4,
@@ -84,6 +78,17 @@ function main() {
         data: new Array(flattened.length * 4).fill(1)
       }
     })
+    
+    return {
+      uniforms: {
+        u_colorOffset: [1, 1, 1, 1],
+        u_colorMult: [1, 1, 1, 1]
+      },
+      active:true,
+      type:gl.LINES,
+      programInfo: programInfo,
+      bufferInfo: bufferInfo
+    }
   }
   
   function createPlanet (color, colorMult, scale, rotation, children=[]) {
@@ -124,11 +129,10 @@ function main() {
     objects.forEach(function(object) {
         object.drawInfo.uniforms.u_matrix = m4.multiply(viewProjectionMatrix, object.worldMatrix);
     });
-
-    //orbitsToDraw.uniforms.u_matrix = m4.multiply(viewProjectionMatrix, orbitsTo.world)
     
-    twgl.drawObjectList(gl, objectsToDraw)
-    twgl.drawObjectList(gl, [orbitsToDraw])
+    orbitsToDraw.uniforms.u_matrix = m4.multiply(viewProjectionMatrix, sunNode.worldMatrix)
+    
+    twgl.drawObjectList(gl, [...objectsToDraw, orbitsToDraw])
 
     requestAnimationFrame(drawScene);
   }
@@ -148,10 +152,11 @@ void main() {
 var vertexShaderOrbit = `#version 300 es
 in vec4 a_position;
 in vec4 a_color;
+uniform mat4 u_matrix;
 out vec4 v_color;
 
 void main() {
-  gl_Position = a_position;
+  gl_Position = u_matrix * a_position;
   v_color = a_color;
 }`
 
@@ -182,7 +187,7 @@ function ellipse (min, max, steps=100) {
     const theta = degToRad(n * 180)
     const x = Math.cos(theta) * max
     const y = Math.sin(theta) * min
-    points.push([y, x, 0])
+    points.push([y, 0, x])
     n += stepSize
   }
   return points
