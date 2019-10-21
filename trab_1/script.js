@@ -62,7 +62,7 @@ function main() {
     return node
   }
   
-  function createPlanet (color, colorMult, scale, rotation, speed, children=[], translation=[0,0,0]) {
+  function createPlanet (color, colorMult, scale, rotation, speed, translation=[0,0,0], children=[]) {
     const planet = new Node({min:rotation, max:rotation, speed:speed}, children, translation, true)
     planet.localMatrix = m4.scaling([scale, scale, scale])
     planet.drawInfo = {
@@ -78,6 +78,7 @@ function main() {
   }
 
   function createSolarSystem () { 
+    /* TODO: AUTOMATIZE THIS CHILD PUTTING THING... */
     const sun = createPlanet(
       [0.6, 0.6, 0, 1], 
       [0.4, 0.4, 0, 1],
@@ -90,6 +91,7 @@ function main() {
       0.5,
       1, 
       0.1);
+
     const moon = createPlanet(
       [0.6, 0.6, 0.6, 1], 
       [0.1, 0.1, 0.1, 1], 
@@ -113,11 +115,11 @@ function main() {
       -0.2
     )
 
-    const mercuryOrbit = new Node({min: 30, max: 30, speed:0.01}, [mercury], [0, 0, 100])
-    const venusOrbit = new Node({min: 60, max:50, speed:0.005}, [venus], [0, 0, 200])
+    const mercuryOrbit = new Node({min: 30, max: 30, speed:0.01}, [mercury])
+    const venusOrbit = new Node({min: 60, max:50, speed:0.005}, [venus])
     
-    const moonOrbit = new Node({min:22, max:20, speed:0.01}, [moon], [0, 0, 100])
-    const earthOrbit = new Node({min:100, max:85, speed:0.001}, [earth, moonOrbit], [100, 0, 0])
+    const moonOrbit = new Node({min:22, max:20, speed:0.01}, [moon])
+    const earthOrbit = new Node({min:100, max:85, speed:0.001}, [earth, moonOrbit], [0, 0, 0])
 
     const solarSystem = new Node({min:0, max:0, speed:0.01}, [mercuryOrbit, venusOrbit, earthOrbit, sun])
 
@@ -182,7 +184,7 @@ out vec4 outColor;
 void main() {
   outColor = v_color * u_colorMult + u_colorOffset;}`
 
-function ellipse (min, max, steps=100) {
+function ellipse (min, max, translation, steps=100) {
   let points = []
   let n = 0
   let stepSize = 2/steps
@@ -190,7 +192,10 @@ function ellipse (min, max, steps=100) {
     const theta = degToRad(n * 180)
     const x = Math.cos(theta) * max
     const y = Math.sin(theta) * min
-    points.push([y, 0, x])
+    points.push([
+      y + translation[0], 
+      0 + translation[1], 
+      x + translation[2]])
     n += stepSize
   }
   return points
@@ -209,21 +214,25 @@ function* interpolateEllipse (min, max, speed) {
   }
 }
 
+/* TODO: ADD TILT SUPPORT */
 var Node = function({max, min, speed=0.01}, children=[], translation=[0, 0, 0], isPlanet=false) {
   this.parent = null
   this.isPlanet = isPlanet
   this.children = children
-  this.children.map(child => { child.parent = this })
-  this.localMatrix = m4.identity()
-  this.translation = translation
-  m4.translate(this.localMatrix, this.translation, this.localMatrix)
-
-  this.worldMatrix = m4.identity()
   this.max = max
   this.min = min
   this.speed = speed
-  this.orbit = ellipse(this.min, this.max)
+  this.translation = [...translation]
+
+  this.localMatrix = m4.identity()
+  this.worldMatrix = m4.identity()
+  this.children.map(child => { child.parent = this })
+
+
+  this.orbit = ellipse(this.min, this.max, this.translation)
+  console.log(this.orbit)
   this.ellipseGenerator = interpolateEllipse(this.max, this.min, this.speed) 
+
   this.tick = (recursive=true, deltaTime) => {
     if(this.isPlanet) {
       const rotation = m4.rotationY(this.speed)
@@ -233,6 +242,8 @@ var Node = function({max, min, speed=0.01}, children=[], translation=[0, 0, 0], 
       const [x, z] = value
       const currentPosition = m4.getAxis(this.localMatrix, 3)
       const translateVector = v3.subtract([x, 0, z], currentPosition)
+      v3.add(this.translation, translateVector, translateVector)
+      
       m4.translate(
         this.localMatrix,
         translateVector,
@@ -251,8 +262,5 @@ Node.prototype.updateWorldMatrix = function(matrix) {
 function degToRad(d) {
   return d * Math.PI / 180;
 }
-
-
-
 
 main();
