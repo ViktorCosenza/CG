@@ -82,7 +82,7 @@ function main() {
     const sun = createPlanet(
       [0.6, 0.6, 0, 1], 
       [0.4, 0.4, 0, 1],
-      0.5,
+      2,
       1, 
       0.0005)
     const earth = createPlanet(
@@ -119,7 +119,7 @@ function main() {
     const venusOrbit = new Node({min: 60, max:50, speed:0.005}, [venus])
     
     const moonOrbit = new Node({min:22, max:20, speed:0.01}, [moon])
-    const earthOrbit = new Node({min:180, max:85, speed:0.02}, [earth, moonOrbit], [0, 0, 0], degToRad(25))
+    const earthOrbit = new Node({min:85, max:80, speed:0.002}, [earth, moonOrbit], [5, 0, 0], degToRad(5))
 
     const solarSystem = new Node({min:0, max:0, speed:0.01}, [mercuryOrbit, venusOrbit, earthOrbit, sun])
 
@@ -155,9 +155,9 @@ function main() {
     });
 
     orbitsToDraw.forEach(orbit => {
-/* TODO FIND A WAY TO FIX THIS WHITOUT TRANSLATION IT WORKS :(*/
       const transform = m4.copy(orbit.parent.worldMatrix)
       m4.rotateZ(transform, orbit.tilt, transform)
+      m4.translate(transform, v3.mulScalar(orbit.translation, 2), transform)
       orbit.drawInfo.uniforms.u_matrix = m4.multiply(viewProjectionMatrix, transform)
     })
     
@@ -215,7 +215,7 @@ function* interpolateEllipse (min, max, speed) {
   }
 }
 
-/* TODO: ADD TILT SUPPORT */
+
 var Node = function({max, min, speed=0.01}, children=[], translation=[0, 0, 0], tilt=0, isPlanet=false) {
   this.parent = null
   this.isPlanet = isPlanet
@@ -229,7 +229,6 @@ var Node = function({max, min, speed=0.01}, children=[], translation=[0, 0, 0], 
   this.localMatrix = m4.identity()
   this.worldMatrix = m4.identity()
   this.children.map(child => { child.parent = this })
-
 
   this.orbit = ellipse(this.min, this.max)
   this.ellipseGenerator = interpolateEllipse(this.max, this.min, this.speed) 
