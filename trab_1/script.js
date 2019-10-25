@@ -17,19 +17,19 @@ function main() {
     switch (d) {
       case 43: /* + */
       case 61: /* = */
-        updateCamera([0, 0, -1])
+        updateCamera([0, -1, 0])
         break
       case 45: /* - */
-        updateCamera([0, 0, 1])
+        updateCamera([0, 1, 0])
         break
       case 97: /* A */
-        updateCamera([-1, 0, 0])
+        updateCamera([1, 0, 0])
         break
       case 99: /* C */
-        updateCamera(null, m4.rotateY, -1)
+        updateCamera(null, m4.rotateZ, -1)
         break
       case 100: /* D */
-        updateCamera([1, 0, 0])
+        updateCamera([-1, 0, 0])
         break  
       case 101: /* E */
         updateCamera(null, m4.rotateX, 1)
@@ -38,13 +38,13 @@ function main() {
         updateCamera(null, m4.rotateX, -1)
         break
       case 115: /* S */
-        updateCamera([0, -1, 0])
+        updateCamera([0, 0, 1])
         break
       case 119: /* W */
-        updateCamera([0, 1, 0])
+        updateCamera([0, 0, -1])
         break
       case 122: /* Z */
-        updateCamera(null, m4.rotateY, 1)
+        updateCamera(null, m4.rotateZ, 1)
         break
       }
   }
@@ -79,18 +79,13 @@ function main() {
 
   /* Helper Functions */
   function updateCamera(translation=null, rotation=null, direction=1) {
-    if (!!translation) {
-      //v3.add(translation, cameraPosition, cameraPosition)
-      m4.translate(cameraMatrix, translation, cameraMatrix)
-    }
-
-    if (!!rotation) {
-      console.log()
-      rotation(cameraMatrix, direction * 0.01, cameraMatrix)
-    }
-
-    //m4.lookAt(cameraPosition, target, up, cameraMatrix)
-    m4.inverse(cameraMatrix, viewMatrix)
+    if (!!translation) 
+      m4.translate(
+        solarSystem.parent.worldMatrix,
+        v3.mulScalar(translation, 10, translation), 
+        solarSystem.parent.worldMatrix)
+    if (!!rotation)
+      rotation(solarSystem.parent.worldMatrix, direction * 0.1, solarSystem.parent.worldMatrix)
   }
 
   function createOrbit(node) {
@@ -317,7 +312,7 @@ Node.prototype.updateWorldMatrix = function(matrix) {
     m4.translate(transformed, this.translation, transformed)
     m4.multiply(transformed, this.localMatrix, this.worldMatrix)
   }
-  else        m4.copy(this.localMatrix, this.worldMatrix)
+  //else        m4.copy(this.localMatrix, this.worldMatrix)
   this.children.map(child => child.updateWorldMatrix(this.worldMatrix))
 }
 
