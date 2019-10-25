@@ -74,7 +74,7 @@ function main() {
   var up = [0, 0, 1];
   var cameraMatrix = m4.lookAt(cameraPosition, target, up);
   var viewMatrix = m4.inverse(cameraMatrix);
-  var fieldOfViewRadians = degToRad(120);
+  var fieldOfViewRadians = degToRad(80);
 
   var sphereBufferInfo = flattenedPrimitives.createSphereBufferInfo(gl, 10, 12, 6);
 
@@ -199,6 +199,21 @@ function main() {
       0.1
     )
 
+    const europa = createPlanet(
+      [0.6, 0.6, 0.8, 1], [0.4, 0.4, 0, 1],
+      0.1,
+      0.1,
+      0.1
+    )
+
+    const titan = createPlanet(
+      [0.3, 0.6, 0.6, 1], [0.4, 0.4, 0, 1],
+      0.1,
+      0.1,
+      0.1
+    )
+    
+
     const saturn = createPlanet(
       [0.3, 0.3, 0.3, 1], [0.6, 0.4, 0, 1],
       0.5,
@@ -239,7 +254,12 @@ function main() {
     const earthOrbit = new Node({min:85, max:80, speed:0.002}, [earth, moonOrbit], [5, 0, 0], degToRad(5))
 
     const marsOrbit = new Node({min: 160, max: 150, speed:0.01}, [mars], [0, 0, 0], degToRad(-0.5))
-    const jupyterOrbit = new Node({min: 200, max: 190, speed:0.01}, [jupyter], [0, 0, 10], degToRad(-0.05))
+    
+
+    const titanOrbit = new Node({min: 35, max: 35, speed:0.05}, [titan], [3, 0, -3], degToRad(3))
+    const europaOrbit = new Node({min: 30, max: 26, speed:0.01}, [europa], [0, 0, 3], degToRad(-0.05))
+    const jupyterOrbit = new Node({min: 200, max: 190, speed:0.01}, [jupyter, europaOrbit, titanOrbit], [0, 0, 10], degToRad(-0.05))
+
 
     const saturnRingsOrbits = saturnRings.map((el, idx) => new Node({min: idx * 0.5 + 10, max: idx * 0.5 + 10, speed: 0}, [el], [0, 0, 0], degToRad(5), false, 1000))
 
@@ -257,7 +277,7 @@ function main() {
 
     return {
       parent: solarSystem,
-      planets: [sun,mercury, venus, earth, moon, mars, jupyter, saturn, halley, ...saturnRings, uranus, neptune, pluto],
+      planets: [sun, mercury, venus, earth, moon, mars, jupyter, europa, titan, saturn, halley, ...saturnRings, uranus, neptune, pluto],
       orbits: [
         moonOrbit, 
         mercuryOrbit, 
@@ -265,6 +285,8 @@ function main() {
         earthOrbit, 
         marsOrbit, 
         jupyterOrbit, 
+        europaOrbit,
+        titanOrbit,
         saturnOrbit, ...saturnRingsOrbits,
         uranusOrbit,
         neptuneOrbit,
