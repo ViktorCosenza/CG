@@ -9,8 +9,15 @@ const {v3, m4} = twgl
 function main() {
 
   /* Initial setup */
-  const movement = document.getElementById("move")
-  movement.onkeypress =  e => {
+
+  let timeSpeed = 0.001
+  let then = 0;
+  document.getElementById("speedup")
+    .onclick = e => {timeSpeed *= 10; then*=10}
+  document.getElementById("speeddown")
+    .onclick = e => {timeSpeed *= 0.1; then*=0.1}
+
+  document.getElementById("move").onkeypress =  e => {
     const d = e.which || e.keyCode;
     console.log(d)
     e.target.value = ""
@@ -48,8 +55,6 @@ function main() {
         break
       }
   }
-  movement.focus()
-  movement.select()
 
   const canvas = document.getElementById("canvas");
   const gl = canvas.getContext("webgl2");
@@ -130,7 +135,6 @@ function main() {
   }
 
   function createSolarSystem () { 
-    /* TODO: AUTOMATIZE THIS CHILD PUTTING THING... */
     const sun = createPlanet(
       [0.6, 0.6, 0, 1], 
       [0.4, 0.4, 0, 1],
@@ -189,9 +193,8 @@ function main() {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
   }
 
-  let then = 0;
   function drawScene(time) {
-    time *= 0.01
+    time *= timeSpeed
     const deltaTime = time - then;
     then = time
     resetCanvas(gl)    
@@ -287,7 +290,7 @@ var Node = function({max, min, speed=0.01}, children=[], translation=[0, 0, 0], 
 
   this.tick = (recursive=true, deltaTime) => {
     if(this.isPlanet) {
-      const rotation = m4.rotationY(this.speed)
+      const rotation = m4.rotationY(this.speed * deltaTime)
       m4.multiply(rotation, this.localMatrix, this.localMatrix)
     } else {
       const {value} = this.ellipseGenerator.next(deltaTime)
@@ -312,7 +315,6 @@ Node.prototype.updateWorldMatrix = function(matrix) {
     m4.translate(transformed, this.translation, transformed)
     m4.multiply(transformed, this.localMatrix, this.worldMatrix)
   }
-  //else        m4.copy(this.localMatrix, this.worldMatrix)
   this.children.map(child => child.updateWorldMatrix(this.worldMatrix))
 }
 
