@@ -19,9 +19,14 @@ function main() {
 
   document.getElementById("move").onkeypress =  e => {
     const d = e.which || e.keyCode;
-    console.log(d)
     e.target.value = ""
     switch (d) {
+      case 49: /* 1 */
+        updateCamera(null, m4.rotateY, 1)
+        break
+      case 51: /* 3 */
+        updateCamera(null, m4.rotateY, -1)
+        break
       case 43: /* + */
       case 61: /* = */
         updateCamera([0, -1, 0])
@@ -64,7 +69,7 @@ function main() {
   gl.enable(gl.DEPTH_TEST);
   twgl.setAttributePrefix("a_");
 
-  var cameraPosition = [0, -100, 0];
+  var cameraPosition = [0, -250, 0];
   var target = [0, 0, 0];
   var up = [0, 0, 1];
   var cameraMatrix = m4.lookAt(cameraPosition, target, up);
@@ -141,12 +146,37 @@ function main() {
       2,
       1, 
       0.0005)
+    
+    const halley = createPlanet(
+      [1, 1, 1, 1],
+      [0, 0, 0, 1],
+      0.1,
+      1,
+      0.005
+    )
+          
+    const mercury = createPlanet(
+      [1, 0, 0, 1],
+      [1, 1, 1, 1],
+      0.2,
+      0.1,
+      -0.2
+    )
+        
+    const venus = createPlanet(
+      [0.5, 0, 0, 0.1],
+      [1, 1, 0, 1],
+      0.5,
+      0.5,
+      -0.5
+    )
+
     const earth = createPlanet(
       [0.2, 0.5, 0.8, 1], 
       [0.8, 0.5, 0.2, 1], 
       0.5,
       1, 
-      0.1);
+      0.5);
 
     const moon = createPlanet(
       [0.6, 0.6, 0.6, 1], 
@@ -155,20 +185,51 @@ function main() {
       0.1, 
       -0.01)
     
-    const venus = createPlanet(
-      [0.5, 0, 0, 0.1],
-      [1, 1, 0, 1],
+    const mars = createPlanet(
+      [1, 0, 0, 1], [1, 1, 1, 1],
+      0.4,
+      0.1,
+      0.5
+    )
+
+    const jupyter = createPlanet(
+      [0.6, 0.6, 0.6, 1], [0.4, 0.4, 0, 1],
+      1,
+      0.1,
+      0.1
+    )
+
+    const saturn = createPlanet(
+      [0.3, 0.3, 0.3, 1], [0.6, 0.4, 0, 1],
       0.5,
       0.1,
-      -0.2
+      0.1
     )
     
-    const mercury = createPlanet(
-      [1, 0, 0, 1],
-      [1, 1, 1, 1],
-      0.2,
+    const saturnRings = (new Array(15).fill(0)).map(e => 
+      createPlanet(
+        [0, 0, 0, 0], [0, 0, 0, 0], 0, 0, 0
+      ))
+    
+    const uranus = createPlanet(
+      [0.1, 0, 1, 1], [0.3, 0.6, 0, 1],
+      0.5,
       0.1,
-      -0.2
+      0.1
+    )
+
+    const neptune = createPlanet(
+      [0.1, 0, 1, 0.7], [0.3, 0.6, 0, 1],
+      0.3,
+      0.1,
+      0.1
+    )
+
+    const pluto = createPlanet(
+      [0.1, 0, 1, 1], [0.3, 0.6, 0, 1],
+      0.1,
+      0.1,
+      0.1
     )
 
     const mercuryOrbit = new Node({min: 30, max: 30, speed:0.01}, [mercury])
@@ -177,12 +238,38 @@ function main() {
     const moonOrbit = new Node({min:22, max:20, speed:0.01}, [moon])
     const earthOrbit = new Node({min:85, max:80, speed:0.002}, [earth, moonOrbit], [5, 0, 0], degToRad(5))
 
-    const solarSystem = new Node({min:0, max:0, speed:0.01}, [mercuryOrbit, venusOrbit, earthOrbit, sun])
+    const marsOrbit = new Node({min: 160, max: 150, speed:0.01}, [mars], [0, 0, 0], degToRad(-0.5))
+    const jupyterOrbit = new Node({min: 200, max: 190, speed:0.01}, [jupyter], [0, 0, 10], degToRad(-0.05))
+
+    const saturnRingsOrbits = saturnRings.map((el, idx) => new Node({min: idx * 0.5 + 10, max: idx * 0.5 + 10, speed: 0}, [el], [0, 0, 0], degToRad(5), false, 1000))
+
+    const saturnOrbit = new Node({min: 300, max: 280, speed:0.01}, [saturn, ...saturnRingsOrbits], [0, 0, 10], degToRad(-0.05))
+  
+    const uranusOrbit = new Node({min: 450, max: 430, speed:0.01}, [uranus])
+    const neptuneOrbit = new Node({min: 500, max: 500, speed:0.01}, [neptune])
+    const plutoOrbit = new Node({min: 600, max: 600, speed:0.01}, [pluto], [0, 0, 0], degToRad(15))
+
+    const halleyOrbit = new Node({min: 500, max: 150, speed: 0.005}, [halley], [230, 0, 0], degToRad(30))
+    const solarSystem = new Node(
+      {min:0, max:0, speed:0.01}, 
+      [mercuryOrbit, venusOrbit, earthOrbit, marsOrbit, jupyterOrbit, saturnOrbit, halleyOrbit, uranusOrbit, neptuneOrbit, plutoOrbit, sun]
+    )
 
     return {
       parent: solarSystem,
-      planets: [sun, venus, earth, moon, mercury],
-      orbits: [moonOrbit, earthOrbit, venusOrbit, mercuryOrbit]
+      planets: [sun,mercury, venus, earth, moon, mars, jupyter, saturn, halley, ...saturnRings, uranus, neptune, pluto],
+      orbits: [
+        moonOrbit, 
+        mercuryOrbit, 
+        venusOrbit, 
+        earthOrbit, 
+        marsOrbit, 
+        jupyterOrbit, 
+        saturnOrbit, ...saturnRingsOrbits,
+        uranusOrbit,
+        neptuneOrbit,
+        plutoOrbit,
+        halleyOrbit]
     }
   }
 
@@ -271,7 +358,7 @@ function* interpolateEllipse (min, max, speed) {
 }
 
 
-var Node = function({max, min, speed=0.01}, children=[], translation=[0, 0, 0], tilt=0, isPlanet=false) {
+var Node = function({max, min, speed=0.01}, children=[], translation=[0, 0, 0], tilt=0, isPlanet=false, steps=100) {
   this.parent = null
   this.isPlanet = isPlanet
   this.children = children
@@ -285,7 +372,7 @@ var Node = function({max, min, speed=0.01}, children=[], translation=[0, 0, 0], 
   this.worldMatrix = m4.identity()
   this.children.map(child => { child.parent = this })
 
-  this.orbit = ellipse(this.min, this.max)
+  this.orbit = ellipse(this.min, this.max, steps)
   this.ellipseGenerator = interpolateEllipse(this.max, this.min, this.speed) 
 
   this.tick = (recursive=true, deltaTime) => {
