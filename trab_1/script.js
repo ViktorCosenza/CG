@@ -9,6 +9,48 @@ const {v3, m4} = twgl
 function main() {
 
   /* Initial setup */
+  const movement = document.getElementById("move")
+  movement.onkeypress =  e => {
+    const d = e.which || e.keyCode;
+    console.log(d)
+    e.target.value = ""
+    switch (d) {
+      case 43: /* + */
+      case 61: /* = */
+        updateCamera([0, 0, -1])
+        break
+      case 45: /* - */
+        updateCamera([0, 0, 1])
+        break
+      case 97: /* A */
+        updateCamera([-1, 0, 0])
+        break
+      case 99: /* C */
+        updateCamera(null, m4.rotateY, -1)
+        break
+      case 100: /* D */
+        updateCamera([1, 0, 0])
+        break  
+      case 101: /* E */
+        updateCamera(null, m4.rotateX, 1)
+        break
+      case 113: /* Q */
+        updateCamera(null, m4.rotateX, -1)
+        break
+      case 115: /* S */
+        updateCamera([0, -1, 0])
+        break
+      case 119: /* W */
+        updateCamera([0, 1, 0])
+        break
+      case 122: /* Z */
+        updateCamera(null, m4.rotateY, 1)
+        break
+      }
+  }
+  movement.focus()
+  movement.select()
+
   const canvas = document.getElementById("canvas");
   const gl = canvas.getContext("webgl2");
   if (!gl) throw Error('Browser does not support opengl')
@@ -17,12 +59,12 @@ function main() {
   gl.enable(gl.DEPTH_TEST);
   twgl.setAttributePrefix("a_");
 
-  var cameraPosition = [0, -200, 0];
+  var cameraPosition = [0, -100, 0];
   var target = [0, 0, 0];
   var up = [0, 0, 1];
   var cameraMatrix = m4.lookAt(cameraPosition, target, up);
   var viewMatrix = m4.inverse(cameraMatrix);
-  var fieldOfViewRadians = degToRad(90);
+  var fieldOfViewRadians = degToRad(120);
 
   var sphereBufferInfo = flattenedPrimitives.createSphereBufferInfo(gl, 10, 12, 6);
 
@@ -36,6 +78,21 @@ function main() {
   requestAnimationFrame(drawScene);
 
   /* Helper Functions */
+  function updateCamera(translation=null, rotation=null, direction=1) {
+    if (!!translation) {
+      //v3.add(translation, cameraPosition, cameraPosition)
+      m4.translate(cameraMatrix, translation, cameraMatrix)
+    }
+
+    if (!!rotation) {
+      console.log()
+      rotation(cameraMatrix, direction * 0.01, cameraMatrix)
+    }
+
+    //m4.lookAt(cameraPosition, target, up, cameraMatrix)
+    m4.inverse(cameraMatrix, viewMatrix)
+  }
+
   function createOrbit(node) {
     const flattened = node.orbit.flat(Infinity)
     const bufferInfo = twgl.createBufferInfoFromArrays(gl, {
