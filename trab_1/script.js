@@ -247,29 +247,29 @@ function main() {
       0.1
     )
 
-    const mercuryOrbit = new Node({min: 30, max: 30, speed:0.01}, [mercury])
-    const venusOrbit = new Node({min: 60, max:50, speed:0.005}, [venus])
+    const mercuryOrbit = new Node({min: 30, max: 30, speed:0.04}, [mercury])
+    const venusOrbit = new Node({min: 60, max:50, speed:0.02}, [venus])
     
-    const moonOrbit = new Node({min:22, max:20, speed:0.01}, [moon])
-    const earthOrbit = new Node({min:85, max:80, speed:0.002}, [earth, moonOrbit], [5, 0, 0], degToRad(5))
+    const moonOrbit = new Node({min:22, max:20, speed:0.019}, [moon])
+    const earthOrbit = new Node({min:85, max:80, speed:0.01}, [earth, moonOrbit], [5, 0, 0], degToRad(5))
 
     const marsOrbit = new Node({min: 160, max: 150, speed:0.01}, [mars], [0, 0, 0], degToRad(-0.5))
     
 
     const titanOrbit = new Node({min: 35, max: 35, speed:0.05}, [titan], [3, 0, -3], degToRad(3))
-    const europaOrbit = new Node({min: 30, max: 26, speed:0.01}, [europa], [0, 0, 3], degToRad(-0.05))
-    const jupyterOrbit = new Node({min: 200, max: 190, speed:0.01}, [jupyter, europaOrbit, titanOrbit], [0, 0, 10], degToRad(-0.05))
+    const europaOrbit = new Node({min: 30, max: 26, speed:0.099}, [europa], [0, 0, 3], degToRad(-0.05))
+    const jupyterOrbit = new Node({min: 200, max: 190, speed:0.0015}, [jupyter, europaOrbit, titanOrbit], [0, 0, 10], degToRad(-0.05))
 
 
     const saturnRingsOrbits = saturnRings.map((el, idx) => new Node({min: idx * 0.5 + 10, max: idx * 0.5 + 10, speed: 0}, [el], [0, 0, 0], degToRad(5), false, 1000))
 
-    const saturnOrbit = new Node({min: 300, max: 280, speed:0.01}, [saturn, ...saturnRingsOrbits], [0, 0, 10], degToRad(-0.05))
+    const saturnOrbit = new Node({min: 300, max: 280, speed:0.0009}, [saturn, ...saturnRingsOrbits], [0, 0, 10], degToRad(-0.05))
   
-    const uranusOrbit = new Node({min: 450, max: 430, speed:0.01}, [uranus])
-    const neptuneOrbit = new Node({min: 500, max: 500, speed:0.01}, [neptune])
-    const plutoOrbit = new Node({min: 600, max: 600, speed:0.01}, [pluto], [0, 0, 0], degToRad(15))
+    const uranusOrbit = new Node({min: 450, max: 430, speed:0.0005}, [uranus])
+    const neptuneOrbit = new Node({min: 500, max: 500, speed:0.00018}, [neptune])
+    const plutoOrbit = new Node({min: 600, max: 600, speed:0.00099}, [pluto], [0, 0, 0], degToRad(15))
 
-    const halleyOrbit = new Node({min: 500, max: 150, speed: 0.005}, [halley], [230, 0, 0], degToRad(30))
+    const halleyOrbit = new Node({min: 500, max: 150, speed: 0.0005}, [halley], [230, 0, 0], degToRad(30))
     const solarSystem = new Node(
       {min:0, max:0, speed:0.01}, 
       [mercuryOrbit, venusOrbit, earthOrbit, marsOrbit, jupyterOrbit, saturnOrbit, halleyOrbit, uranusOrbit, neptuneOrbit, plutoOrbit, sun]
